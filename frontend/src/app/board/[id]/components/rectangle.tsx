@@ -1,4 +1,5 @@
 import { BoardObject } from "../type";
+import { colorToCSS } from "@/app/lib/utils";
 
 interface RectangleProps {
   id: string;
@@ -17,7 +18,7 @@ export const Rectangle = ({
 
   return (
     <rect
-      className="shadow-md"
+      className="drop-shadow-md"
       onPointerDown={(e) => onPointerDown(e, id)}
       style={{
         transform: `translate(${x}px, ${y}px)`,
@@ -26,9 +27,9 @@ export const Rectangle = ({
       y={0}
       width={width}
       height={height}
-      strokeWidth={1}
-      fill="#000"
-      stroke="transparent"
+      strokeWidth={2}
+      fill={fill ? colorToCSS(fill) : "#000"}
+      stroke={selectionColor || "transparent"}
     />
   );
 };

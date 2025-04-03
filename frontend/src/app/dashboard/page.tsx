@@ -11,8 +11,10 @@ import {
   User,
   Bell,
   HelpCircle,
+  LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { User as UserType } from "../board/[id]/type";
 // Define types for our data
 interface Board {
   _id: string;
@@ -27,9 +29,21 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isDropMenu, setIsDropMenu] = useState<boolean>(false);
+  const [user, setUser] = useState<UserType | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    const haveUser = localStorage.getItem("user");
+    const haveToken = localStorage.getItem("token");
+
+    if (!haveUser || !haveToken) {
+      router.push("/login");
+      return;
+    }
+
+    setUser(JSON.parse(haveUser));
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -65,8 +79,35 @@ const Dashboard: React.FC = () => {
     );
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+  const toThaiDate = (utc: string) => {
+    const date = new Date(utc);
+    const thaiDate = date.toLocaleString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    return thaiDate;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      onClick={() => {
+        if (isDropMenu) {
+          setIsDropMenu(false);
+        }
+      }}
+      className="min-h-screen bg-gray-50"
+    >
       {/* Top navigation bar */}
       <nav className="bg-white border-b border-gray-200 px-4 py-2.5 fixed w-full z-10">
         <div className="flex justify-between items-center">
@@ -92,21 +133,46 @@ const Dashboard: React.FC = () => {
             <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
               <HelpCircle className="h-5 w-5" />
             </button>
-            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-              <Settings className="h-5 w-5" />
-            </button>
-            <div className="h-8 w-8 bg-blue-600 text-white rounded-full flex items-center justify-center">
+
+            <button
+              onClick={() => {
+                setIsDropMenu(true);
+              }}
+              className="h-8 w-8 bg-blue-600 text-white rounded-full flex items-center justify-center  cursor-pointer"
+            >
               <User className="h-5 w-5" />
-            </div>
+            </button>
           </div>
         </div>
+        {isDropMenu && (
+          <div className="absolute text-gray-800 right-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
+            <div className="hover:bg-gray-100 text-gray-600">
+              <button className="ml-2 p-2 rounded-full flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>Setting</span>
+              </button>
+            </div>
+
+            <div className="hover:bg-gray-100 text-gray-600">
+              <button
+                onClick={handleLogout}
+                className="ml-2 p-2 rounded-full flex items-center space-x-2"
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Main content */}
       <main className="pt-20 px-6 pb-16">
         {/* Header with view options */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Your boards</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {user?.username}&apos;s boards
+          </h1>
           <div className="flex items-center space-x-2">
             <button
               className={`p-2 rounded-md ${
@@ -179,7 +245,7 @@ const Dashboard: React.FC = () => {
                                 {board.title}
                               </h3>
                               <p className="text-xs text-gray-500 mt-1">
-                                Last edited {board.updatedAt}
+                                Last edited {toThaiDate(board.updatedAt)}
                               </p>
                             </div>
                           </>
@@ -197,7 +263,7 @@ const Dashboard: React.FC = () => {
                                 {board.title}
                               </h3>
                               <p className="text-xs text-gray-500">
-                                Last edited {board.updatedAt}
+                                Last edited {toThaiDate(board.updatedAt)}
                               </p>
                             </div>
                             <div className="pr-4"></div>

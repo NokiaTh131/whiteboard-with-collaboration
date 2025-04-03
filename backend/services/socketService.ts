@@ -12,6 +12,7 @@ export class SocketService {
   private permissionService: PermissionService;
   private boardManager: BoardManager;
   private cursors: Map<string, any>; // Store cursor positions by userId
+  private selection: Map<string, string[]>; //Store selection by userId
 
   constructor(io: Server) {
     this.io = io;
@@ -19,6 +20,7 @@ export class SocketService {
     this.permissionService = new PermissionService();
     this.boardManager = new BoardManager();
     this.cursors = new Map();
+    this.selection = new Map();
   }
 
   initializeSocketHandlers(socket: Socket) {
@@ -41,6 +43,13 @@ export class SocketService {
     socket.on("object:update", this.handleObjectUpdate.bind(this, socket));
     socket.on("object:delete", this.handleObjectDelete.bind(this, socket));
 
+    //Selection events
+    socket.on(
+      "selection:update",
+      this.handleSelectionUpdate.bind(this, socket)
+    );
+    socket.on("selection:clear", this.handleSelectionClear.bind(this, socket));
+
     // Cursor events
     socket.on("cursor:move", this.handleCursorMove.bind(this, socket));
     socket.on("cursor:leave", this.handleCursorLeave.bind(this, socket));
@@ -61,6 +70,10 @@ export class SocketService {
           // Remove cursor and notify others
           this.cursors.delete(userId);
           this.io.to(boardId).emit("cursor:leave", userId);
+
+          // Clear selection when user disconnects
+          this.selection.delete(userId);
+          this.io.to(boardId).emit("selection:cleared", { userId });
 
           console.log(
             `User ${userId} removed from board ${boardId} due to disconnect`
@@ -115,10 +128,44 @@ export class SocketService {
         }
       }
 
+      // Send all current selections to the new user
+      for (const [selectionUserId, objectIds] of this.selection.entries()) {
+        if (selectionUserId !== userId) {
+          socket.emit("selection:updated", {
+            userId: selectionUserId,
+            objectIds: objectIds,
+          });
+        }
+      }
+
       this.io.to(boardId).emit("room", participants);
     } catch (error) {
       socket.emit("error", { message: "Failed to join board" });
     }
+  }
+
+  private handleSelectionUpdate(socket: Socket, data: any) {
+    const userId = socket.data.user.id;
+    const { boardId, objectIds } = data;
+    // Store the selection
+    this.selection.set(userId, objectIds);
+
+    // Broadcast to all users in the room
+    this.io.to(boardId).emit("selection:updated", {
+      userId,
+      objectIds,
+    });
+  }
+
+  private handleSelectionClear(socket: Socket, data: any) {
+    const userId = socket.data.user.id;
+    const { boardId } = data;
+
+    // Clear the selection
+    this.selection.delete(userId);
+
+    // Broadcast to all users in the room
+    this.io.to(boardId).emit("selection:cleared", { userId });
   }
 
   private handleCursorMove(socket: Socket, cursorData: any) {

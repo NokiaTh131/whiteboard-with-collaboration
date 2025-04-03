@@ -5,22 +5,23 @@ import { connectionIdToColor } from "@/app/lib/utils";
 
 interface CursorPresenceProps {
   position: Point;
+  userId: string;
   username: string;
 }
 
-export const CursorPresence = memo(
-  ({ position, username }: CursorPresenceProps) => {
-    // Generate a consistent color based on the username
-    const stringToColor = (str: string) => {
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const color = connectionIdToColor(Math.abs(hash));
-      return color;
-    };
+// Generate a consistent color based on the username
+export const stringToColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color = connectionIdToColor(Math.abs(hash));
+  return color;
+};
 
-    const userColor = stringToColor(username);
+export const CursorPresence = memo(
+  ({ position, userId, username }: CursorPresenceProps) => {
+    const userColor = stringToColor(userId);
 
     return (
       <div
