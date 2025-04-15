@@ -1,98 +1,102 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Collaborative Writeboard App Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+real-time collaborative drawing application built with NestJS. This backend provides a robust API for user authentication, board management, and real-time drawing features using WebSockets.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+-  **Authentication System**: Register, login, and JWT-based authentication with HTTP-only cookies
+-  **User Management**: User creation, search, and profile management
+-  **Collaborative Boards**: Create and manage drawing boards with various permission levels
+-  **Real-time object management**: WebSocket-based real-time collaboration features
+-  **Live Collaboration**: See other users' cursors, selections, and changes in real-time
+-  **Permission System**: Role-based access control for boards (owner, editor, viewer)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Technology Stack
 
-## Project setup
+- **Framework**: NestJS
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: Passport.js with JWT strategy
+- **Real-time Communication**: Socket.IO
+- **Validation**: Class Validator
 
-```bash
-$ npm install
+## Prerequisites
+
+- Node.js (v14+)
+- MongoDB
+- npm or yarn
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+PORT
+MONGODB_URI
+JWT_SECRET
 ```
 
-## Compile and run the project
+## Installation
 
 ```bash
-# development
-$ npm run start
+# Install dependencies
+npm install
 
-# watch mode
-$ npm run start:dev
+# Development
+npm run start:dev
 
-# production mode
-$ npm run start:prod
 ```
 
-## Run tests
+## API Endpoints
 
-```bash
-# unit tests
-$ npm run test
+### Authentication
 
-# e2e tests
-$ npm run test:e2e
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login and get authentication token
+- `POST /api/auth/logout` - Logout and clear authentication token
 
-# test coverage
-$ npm run test:cov
-```
+### Boards
 
-## Deployment
+- `POST /api/boards` - Create a new board
+- `GET /api/boards` - Get all boards for the current user
+- `GET /api/boards/:id` - Get a specific board with details
+- `PUT /api/boards/:id` - Update a board's details
+- `DELETE /api/boards/:id` - Delete a board
+- `POST /api/boards/:id/invite` - Invite a user to a board
+- `DELETE /api/boards/:id/remove` - Remove a user from a board
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Users
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- `POST /api/user/search` - Search for users by email
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+## WebSocket Events
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Client to Server
 
-## Resources
+- `board:join` - Join a board room
+- `cursor:move` - Update cursor position
+- `cursor:leave` - Notify when cursor leaves
+- `selection:update` - Update object selection
+- `selection:clear` - Clear object selection
+- `object:create` - Create a new drawing object
+- `object:update` - Update a drawing object
+- `object:delete` - Delete a drawing object
 
-Check out a few resources that may come in handy when working with NestJS:
+### Server to Client
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- `board:state` - Initial board state
+- `room` - Room participants update
+- `cursor:update` - Cursor position update
+- `cursor:leave` - Cursor left notification
+- `selection:updated` - Selection updated
+- `selection:cleared` - Selection cleared
+- `object:created` - Object created
+- `object:updated` - Object updated
+- `object:deleted` - Object deleted
+- `error` - Error messages
 
-## Support
+## Authentication Flow
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. User registers or logs in
+2. Server creates a JWT token and sets it as an HTTP-only cookie
+3. Subsequent requests, including WebSocket connections, include this cookie
+4. Server validates the JWT for API requests and WebSocket connections
