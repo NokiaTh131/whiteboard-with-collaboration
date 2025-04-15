@@ -1,71 +1,102 @@
-#  Whiteboard with Collaboration  
+# Collaborative Writeboard App Backend
 
-A **real-time collaborative whiteboard** built with **Next.js, WebSockets, TypeScript, and MongoDB**. This app lets multiple users draw together on a shared whiteboard, making it perfect for brainstorming, teaching, or just having fun!  
+real-time collaborative drawing application built with NestJS. This backend provides a robust API for user authentication, board management, and real-time drawing features using WebSockets.
 
-##  Features  
+## Features
 
- **Real-time Collaboration** – See changes instantly as others draw.  
- **Multiple Drawing Tools** – Use a pen, eraser, and basic shapes.  
- **Session-Based Rooms** – Share a unique room link with friends or colleagues.  
- **User Data Storage** – Drawings are saved in **MongoDB**, so you won’t lose your work.  
+-  **Authentication System**: Register, login, and JWT-based authentication with HTTP-only cookies
+-  **User Management**: User creation, search, and profile management
+-  **Collaborative Boards**: Create and manage drawing boards with various permission levels
+-  **Real-time object management**: WebSocket-based real-time collaboration features
+-  **Live Collaboration**: See other users' cursors, selections, and changes in real-time
+-  **Permission System**: Role-based access control for boards (owner, editor, viewer)
 
-##  Tech Stack  
+## Technology Stack
 
-- **Frontend**: Next.js, TypeScript, Tailwind CSS  
-- **Backend**: Node.js, WebSockets  
-- **Database**: MongoDB (for saving drawings & session data)  
+- **Framework**: NestJS
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: Passport.js with JWT strategy
+- **Real-time Communication**: Socket.IO
+- **Validation**: Class Validator
 
-## 🔧 Getting Started  
+## Prerequisites
 
-### Install Prerequisites  
-Make sure you have:  
-- **Node.js** (14+ recommended)  
-- **MongoDB** (local or cloud, like MongoDB Atlas)  
+- Node.js (v14+)
+- MongoDB
+- npm or yarn
 
-### Clone the Repo  
+## Environment Variables
 
-```bash
-git clone https://github.com/NokiaTh131/whiteboard-with-collaboration.git
-cd whiteboard-with-collaboration
+Create a `.env` file in the root directory with the following variables:
+
+```
+PORT
+MONGODB_URI
+JWT_SECRET
 ```
 
-### Install Dependencies  
+## Installation
 
 ```bash
+# Install dependencies
 npm install
+
+# Development
+npm run start:dev
+
 ```
 
-### Set Up Environment Variables  
+## API Endpoints
 
-Create a **.env.local** file and add your MongoDB connection string:  
+### Authentication
 
-```env
-MONGODB_URI=mongodb+srv://your-user:your-password@your-cluster.mongodb.net/your-db
-```
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login and get authentication token
+- `POST /api/auth/logout` - Logout and clear authentication token
 
-### Run the App  
+### Boards
 
-```bash
-npm run dev
-```
+- `POST /api/boards` - Create a new board
+- `GET /api/boards` - Get all boards for the current user
+- `GET /api/boards/:id` - Get a specific board with details
+- `PUT /api/boards/:id` - Update a board's details
+- `DELETE /api/boards/:id` - Delete a board
+- `POST /api/boards/:id/invite` - Invite a user to a board
+- `DELETE /api/boards/:id/remove` - Remove a user from a board
 
-Now, open **http://localhost:3000** and start drawing! 🎨  
+### Users
 
-## How to Use  
+- `POST /api/user/search` - Search for users by email
 
-1️⃣ Open the whiteboard and start drawing.  
-2️⃣ Share your room link to invite others.  
-3️⃣ All changes are synced in **real-time** with WebSockets.  
-4️⃣ Close the app? No worries! Your work is saved in **MongoDB**.  
+## WebSocket Events
 
+### Client to Server
 
-## Acknowledgments  
+- `board:join` - Join a board room
+- `cursor:move` - Update cursor position
+- `cursor:leave` - Notify when cursor leaves
+- `selection:update` - Update object selection
+- `selection:clear` - Clear object selection
+- `object:create` - Create a new drawing object
+- `object:update` - Update a drawing object
+- `object:delete` - Delete a drawing object
 
-- **[Next.js](https://nextjs.org/)** – Frontend framework  
-- **[MongoDB](https://www.mongodb.com/)** – NoSQL database  
-- **[WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)** – Real-time communication  
-- **[Tailwind CSS](https://tailwindcss.com/)** – Styling  
+### Server to Client
 
----
+- `board:state` - Initial board state
+- `room` - Room participants update
+- `cursor:update` - Cursor position update
+- `cursor:leave` - Cursor left notification
+- `selection:updated` - Selection updated
+- `selection:cleared` - Selection cleared
+- `object:created` - Object created
+- `object:updated` - Object updated
+- `object:deleted` - Object deleted
+- `error` - Error messages
 
-Hope this makes your README more engaging and beginner-friendly! Let me know if you need any tweaks. 🚀
+## Authentication Flow
+
+1. User registers or logs in
+2. Server creates a JWT token and sets it as an HTTP-only cookie
+3. Subsequent requests, including WebSocket connections, include this cookie
+4. Server validates the JWT for API requests and WebSocket connections
