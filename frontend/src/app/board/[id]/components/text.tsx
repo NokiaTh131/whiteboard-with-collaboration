@@ -34,7 +34,7 @@ export const Text = ({
 }: TextProps) => {
   const { x, y, width, height, fill, value } = layer;
 
-  const debounceUpdateText = debounce(updateValue, 300);
+  const debounceUpdateText = debounce(updateValue, 1000);
 
   const handleTextChange = (e: ContentEditableEvent) => {
     debounceUpdateText(e.target.value);

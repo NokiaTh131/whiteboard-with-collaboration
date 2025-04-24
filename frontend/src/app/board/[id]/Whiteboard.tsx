@@ -24,7 +24,7 @@ import { CursorPresence, stringToColor } from "./CursorPresence";
 import { SelectionBox } from "./SelectionBox";
 import { SelectionTools } from "./SelectionTools";
 import { Stack } from "@/app/hooks/stack";
-interface CanvasProbs {
+interface CanvasProps {
   boardId: string;
 }
 
@@ -39,7 +39,7 @@ interface SelectionMap {
   [userId: string]: string[];
 }
 
-export const Canvas = ({ boardId }: CanvasProbs) => {
+export const Canvas = ({ boardId }: CanvasProps) => {
   const [canvasState, setCanvasState] = useState<CanvasState>({
     mode: CanvasMode.None,
   });
@@ -68,8 +68,9 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
   const [reposition, setRePosition] =
     useState<Record<string, { x: number; y: number }>>();
   const [isMoved, setIsMoved] = useState<boolean>(false);
-  const [isUndo, setIsUndo] = useState<boolean>(false);
-  const history = useRef(new Stack<ActionHistory>(10));
+  const isUndoRef = useRef(false);
+  // const history = useRef(new Stack<ActionHistory>(10));
+  const userStacksRef = useRef(new Map<string, Stack<ActionHistory>>());
   const MAX_OBJECTS = 50;
 
   useEffect(() => {
@@ -98,15 +99,17 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
 
     socket.on("object:created", (newObject: BoardObject) => {
       setBoardObjects((prev) => [...prev, newObject]);
-      if (!isUndo) {
-        history.current.push({
-          objectId: newObject._id,
-          currentState: newObject,
-          previousState: null,
-          modifyBy: user.id,
-        });
+      if (!isUndoRef.current) {
+        if (newObject.createdBy === user.id) {
+          getUserStack(user.id).push({
+            objectId: newObject._id,
+            currentState: newObject,
+            previousState: null,
+            modifyBy: user.id,
+          });
+        }
       }
-      setIsUndo(false);
+      isUndoRef.current = false;
     });
 
     socket.on("object:updated", (responseObj) => {
@@ -121,31 +124,35 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
         );
       });
 
-      if (!isUndo) {
-        history.current.push({
-          objectId: responseObj.updatedObject._id,
-          currentState: responseObj.updatedObject,
-          previousState: responseObj.previousState,
-          modifyBy: responseObj.updatedObject.createdBy,
-        });
+      if (!isUndoRef.current) {
+        if (responseObj.updatedObject.createdBy === user.id) {
+          getUserStack(user.id).push({
+            objectId: responseObj.updatedObject._id,
+            currentState: responseObj.updatedObject,
+            previousState: responseObj.previousState,
+            modifyBy: responseObj.updatedObject.createdBy,
+          });
+        }
       }
-      setIsUndo(false);
+      isUndoRef.current = false;
     });
 
-    socket.on("object:deleted", (deletedObject) => {
+    socket.on("object:deleted", (deletedObject: BoardObject) => {
       setBoardObjects((prev) =>
         prev.filter((obj) => obj._id !== deletedObject._id)
       );
       setSelectedObjects([]);
-      if (!isUndo) {
-        history.current.push({
-          objectId: deletedObject._id,
-          currentState: null,
-          previousState: deletedObject,
-          modifyBy: user.id,
-        });
+      if (!isUndoRef.current) {
+        if (deletedObject.createdBy === user.id) {
+          getUserStack(user.id).push({
+            objectId: deletedObject._id,
+            currentState: null,
+            previousState: deletedObject,
+            modifyBy: user.id,
+          });
+        }
       }
-      setIsUndo(false);
+      isUndoRef.current = false;
     });
 
     // Cursor movement handlers
@@ -199,13 +206,20 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       socket.off("selection:cleared");
       socket.disconnect();
     };
-  }, [boardId, isUndo, user.id]);
+  }, [boardId, user.id]);
+
+  const getUserStack = (userId: string) => {
+    if (!userStacksRef.current.has(userId)) {
+      userStacksRef.current.set(userId, new Stack<ActionHistory>(10));
+    }
+    return userStacksRef.current.get(userId)!;
+  };
 
   const undo = useCallback(() => {
-    if (history.current.size() > 0) {
-      const objectId = history.current.peek()?.objectId;
-      const lastAction = history.current.pop();
-      setIsUndo(true);
+    if (getUserStack(user.id).size() > 0) {
+      const objectId = getUserStack(user.id).peek()?.objectId;
+      const lastAction = getUserStack(user.id).pop();
+      isUndoRef.current = true;
       if (!lastAction?.previousState) {
         console.log("do delete");
         socket?.emit("object:delete", {
@@ -228,7 +242,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
 
       // console.log(history.current.size());
     }
-  }, [boardId, boardObjects.length, socket]);
+  }, [boardId, boardObjects.length, socket, user.id]);
 
   const onDeleteObjects = useCallback(() => {
     if (selectedObjects.length > 0) {
@@ -469,7 +483,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
         newSelection = selectedObjects.filter((id) => id !== objectId);
       }
       if (newSelection.length < 1) {
-        console.log("clear select");
+        // console.log("clear select");
         socket?.emit("selection:clear", { boardId });
       }
 
