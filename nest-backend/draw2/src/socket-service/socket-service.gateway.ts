@@ -215,6 +215,7 @@ export class SocketServiceGateway
   ) {
     const { boardId, objectId, updates } = data;
     const userId = socket.data.user.id as string;
+    console.log(userId);
 
     const canEdit = await this.permissionService.canEditBoard(
       userId,
@@ -226,12 +227,18 @@ export class SocketServiceGateway
       return;
     }
 
+    const previousState =
+      await this.boardObjectService.findByObjectPreviousState(
+        objectId as string,
+      );
     const updatedObject = await this.boardObjectService.findByIdAndUpdate(
       objectId,
-      updates,
+      { ...updates, createdBy: new Types.ObjectId(userId) },
     );
 
-    this.server.to(boardId).emit('object:updated', updatedObject);
+    this.server
+      .to(boardId)
+      .emit('object:updated', { updatedObject, previousState });
   }
 
   @SubscribeMessage('object:delete')
@@ -252,7 +259,8 @@ export class SocketServiceGateway
       return;
     }
 
-    await this.boardObjectService.findByIdAndDelete(objectId);
-    this.server.to(boardId).emit('object:deleted', objectId);
+    const deletedObject =
+      await this.boardObjectService.findByIdAndDelete(objectId);
+    this.server.to(boardId).emit('object:deleted', deletedObject);
   }
 }

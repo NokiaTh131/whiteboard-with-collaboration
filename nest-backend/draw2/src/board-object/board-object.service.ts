@@ -24,6 +24,12 @@ export class BoardObjectService {
       .populate('createdBy', 'username');
   }
 
+  async findByObjectPreviousState(objectId: string) {
+    return this.boardObjectModel
+      .findById(new Types.ObjectId(objectId))
+      .select('width height x y fill -_id');
+  }
+
   async deleteMany(boardId: string) {
     return this.boardObjectModel.deleteMany({
       boardId: new Types.ObjectId(boardId),

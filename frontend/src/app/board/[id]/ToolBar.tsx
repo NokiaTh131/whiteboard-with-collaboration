@@ -8,7 +8,6 @@ import {
   Circle,
   StickyNote,
   Undo,
-  Redo,
   Type,
 } from "lucide-react";
 import { CanvasMode, CanvasState, LayerType } from "./type";
@@ -16,10 +15,10 @@ import { CanvasMode, CanvasState, LayerType } from "./type";
 interface ToolbarProbs {
   canvasState: CanvasState;
   setCanvasState: (newState: CanvasState) => void;
-  connected?: boolean;
+  undo: () => void;
 }
 
-const Toolbar = ({ canvasState, setCanvasState }: ToolbarProbs) => {
+const Toolbar = ({ canvasState, setCanvasState, undo }: ToolbarProbs) => {
   return (
     <div className="fixed top-1/2 left-2 transform -translate-y-1/2">
       <div className="flex flex-col space-y-4 rounded-md bg-white p-1 shadow-md">
@@ -124,12 +123,8 @@ const Toolbar = ({ canvasState, setCanvasState }: ToolbarProbs) => {
       </div>
       <div className="flex flex-col space-y-4 rounded-md bg-white p-1 my-2 shadow-md">
         {/* Undo */}
-        <button className="p-2 hover:bg-gray-200 rounded-sm">
+        <button onClick={undo} className="p-2 hover:bg-gray-200 rounded-sm">
           <Undo size={26} />
-        </button>
-        {/* Redo */}
-        <button className="p-2 hover:bg-gray-200 rounded-sm">
-          <Redo size={26} />
         </button>
       </div>
     </div>

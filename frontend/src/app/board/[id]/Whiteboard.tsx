@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import InformationBar from "./InformationBar";
 import Toolbar from "./ToolBar";
@@ -16,13 +16,14 @@ import {
   CursorPosition,
   Side,
   XYWH,
+  ActionHistory,
 } from "./type";
 import { pointerEventToCanvasPoint, rersizeBounds } from "@/app/lib/utils";
 import { LayerPreview } from "./Layer_Preview";
 import { CursorPresence, stringToColor } from "./CursorPresence";
 import { SelectionBox } from "./SelectionBox";
 import { SelectionTools } from "./SelectionTools";
-
+import { Stack } from "@/app/hooks/stack";
 interface CanvasProbs {
   boardId: string;
 }
@@ -62,11 +63,13 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
   const [otherSelections, setOtherSelections] = useState<SelectionMap>({});
   const [lastCursorUpdate, setLastCursorUpdate] = useState(0);
-  const CURSOR_UPDATE_THROTTLE = 30; // ms
+  const CURSOR_UPDATE_THROTTLE = 50; // ms
   const [resize, setResize] = useState<XYWH | null>(null);
   const [reposition, setRePosition] =
     useState<Record<string, { x: number; y: number }>>();
-
+  const [isMoved, setIsMoved] = useState<boolean>(false);
+  const [isUndo, setIsUndo] = useState<boolean>(false);
+  const history = useRef(new Stack<ActionHistory>(10));
   const MAX_OBJECTS = 50;
 
   useEffect(() => {
@@ -93,25 +96,56 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       setError(data.message);
     });
 
-    socket.on("object:created", (newObject) => {
-      console.log(newObject);
+    socket.on("object:created", (newObject: BoardObject) => {
       setBoardObjects((prev) => [...prev, newObject]);
+      if (!isUndo) {
+        history.current.push({
+          objectId: newObject._id,
+          currentState: newObject,
+          previousState: null,
+          modifyBy: user.id,
+        });
+      }
+      setIsUndo(false);
     });
 
-    socket.on("object:updated", (updatedObject: BoardObject) => {
+    socket.on("object:updated", (responseObj) => {
       setBoardObjects((prev) => {
-        if (!updatedObject) {
+        if (!responseObj.updatedObject) {
           return prev;
         }
         return prev.map((obj) =>
-          obj._id === updatedObject._id ? updatedObject : obj
+          obj._id === responseObj.updatedObject._id
+            ? responseObj.updatedObject
+            : obj
         );
       });
+
+      if (!isUndo) {
+        history.current.push({
+          objectId: responseObj.updatedObject._id,
+          currentState: responseObj.updatedObject,
+          previousState: responseObj.previousState,
+          modifyBy: responseObj.updatedObject.createdBy,
+        });
+      }
+      setIsUndo(false);
     });
 
-    socket.on("object:deleted", (objectId: string) => {
-      setBoardObjects((prev) => prev.filter((obj) => obj._id !== objectId));
+    socket.on("object:deleted", (deletedObject) => {
+      setBoardObjects((prev) =>
+        prev.filter((obj) => obj._id !== deletedObject._id)
+      );
       setSelectedObjects([]);
+      if (!isUndo) {
+        history.current.push({
+          objectId: deletedObject._id,
+          currentState: null,
+          previousState: deletedObject,
+          modifyBy: user.id,
+        });
+      }
+      setIsUndo(false);
     });
 
     // Cursor movement handlers
@@ -165,7 +199,47 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       socket.off("selection:cleared");
       socket.disconnect();
     };
-  }, [boardId, user.id]);
+  }, [boardId, isUndo, user.id]);
+
+  const undo = useCallback(() => {
+    if (history.current.size() > 0) {
+      const objectId = history.current.peek()?.objectId;
+      const lastAction = history.current.pop();
+      setIsUndo(true);
+      if (!lastAction?.previousState) {
+        console.log("do delete");
+        socket?.emit("object:delete", {
+          boardId: boardId,
+          objectId: objectId,
+        });
+      } else if (!lastAction.currentState) {
+        console.log("do create");
+        const objectsSize = boardObjects.length;
+        if (objectsSize >= MAX_OBJECTS) return;
+        const object = lastAction.previousState;
+        socket?.emit("object:create", { object, boardId });
+      } else {
+        socket?.emit("object:update", {
+          boardId: boardId,
+          objectId: objectId,
+          updates: lastAction.previousState,
+        });
+      }
+
+      // console.log(history.current.size());
+    }
+  }, [boardId, boardObjects.length, socket]);
+
+  const onDeleteObjects = useCallback(() => {
+    if (selectedObjects.length > 0) {
+      Object.values(selectedObjects).forEach((objectId) => {
+        socket?.emit("object:delete", {
+          boardId: boardId,
+          objectId: objectId,
+        });
+      });
+    }
+  }, [boardId, selectedObjects, socket]);
 
   const insertLayer = useCallback(
     (layerType: LayerType, position: Point) => {
@@ -301,6 +375,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       emitCursorPosition(point);
       if (canvasState.mode === CanvasMode.Translating) {
         translateSelectedLayers(point);
+        setIsMoved(true);
       } else if (canvasState.mode === CanvasMode.Resizing) {
         resizeSelectedLayer(point);
       }
@@ -321,7 +396,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       const point = pointerEventToCanvasPoint(e, camera);
       if (canvasState.mode === CanvasMode.Inserting) {
         insertLayer(canvasState.layerType, point);
-      } else if (canvasState.mode === CanvasMode.Translating) {
+      } else if (canvasState.mode === CanvasMode.Translating && isMoved) {
         if (reposition && Object.keys(reposition).length > 0) {
           Object.entries(reposition).forEach(([objectId, position]) => {
             socket?.emit("object:update", {
@@ -332,6 +407,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
                 y: position.y,
               },
             });
+            setIsMoved(false);
           });
         }
         setCanvasState({ mode: CanvasMode.None });
@@ -355,6 +431,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
       selectedObjects,
       socket,
       reposition,
+      isMoved,
     ]
   );
 
@@ -425,23 +502,40 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
     return (objectId: any) => colorMap.get(objectId);
   }, [otherSelections]);
 
+  const updateValue = useCallback(
+    (newValue: string) => {
+      socket?.emit("object:update", {
+        boardId: boardId,
+        objectId: selectedObjects[0],
+        updates: {
+          value: newValue,
+        },
+      });
+    },
+    [boardId, selectedObjects, socket]
+  );
+
   return (
     <main
       className="h-full w-full relative bg-neutral-100 touch-none"
       onPointerLeave={onPointerLeave}
     >
       <div className="fixed left-1/2 top-1/2">
-        {JSON.stringify(otherSelections)}
+        {/* {JSON.stringify(otherSelections)} */}
       </div>
       <div className="fixed left-1/2 top-1/4">
-        {JSON.stringify(selectedObjects)}
+        {/* {JSON.stringify(selectedObjects)} */}
       </div>
       {error && (
         <div className="fixed left-1/2 top-5 bg-red-500 text-white p-2 rounded">
           {error}
         </div>
       )}
-      <Toolbar canvasState={canvasState} setCanvasState={setCanvasState} />
+      <Toolbar
+        canvasState={canvasState}
+        setCanvasState={setCanvasState}
+        undo={undo}
+      />
       <SelectionTools
         camera={camera}
         setLastColor={setLastUsedColor}
@@ -449,6 +543,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
         selectedObjects={selectedObjects}
         socket={socket || undefined}
         boardId={boardId}
+        onDeleteObjects={onDeleteObjects}
       />
       {board && (
         <InformationBar
@@ -490,6 +585,7 @@ export const Canvas = ({ boardId }: CanvasProbs) => {
               layer={layer}
               onLayerPointDown={onPointDown}
               selectionColor={objectSelectionColors(layer._id)}
+              updateValue={updateValue}
             />
           ))}
           <SelectionBox

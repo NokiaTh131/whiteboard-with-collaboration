@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type Color = {
   r: number;
   g: number;
@@ -167,4 +168,11 @@ export interface CursorPosition {
   username: string;
   position: Point;
   boardId: string;
+}
+
+export interface ActionHistory {
+  objectId: string;
+  currentState: any;
+  previousState: any;
+  modifyBy: string;
 }

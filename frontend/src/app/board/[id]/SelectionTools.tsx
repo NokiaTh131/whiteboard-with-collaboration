@@ -14,6 +14,7 @@ interface SelectionToolsProps {
   selectedObjects: string[];
   socket?: Socket;
   boardId: string;
+  onDeleteObjects: () => void;
 }
 
 export const SelectionTools = memo(
@@ -24,6 +25,7 @@ export const SelectionTools = memo(
     selectedObjects,
     socket,
     boardId,
+    onDeleteObjects,
   }: SelectionToolsProps) => {
     const soleObjectId =
       selectedObjects.length === 1 ? selectedObjects[0] : null;
@@ -33,17 +35,6 @@ export const SelectionTools = memo(
         ? [boardObjects.find((object) => object._id === soleObjectId)!]
         : []
     );
-
-    const onDeleteObjects = useCallback(() => {
-      if (selectedObjects.length > 0) {
-        Object.values(selectedObjects).forEach((objectId) => {
-          socket?.emit("object:delete", {
-            boardId: boardId,
-            objectId: objectId,
-          });
-        });
-      }
-    }, [boardId, selectedObjects, socket]);
 
     const setFill = useCallback(
       (fill: Color) => {

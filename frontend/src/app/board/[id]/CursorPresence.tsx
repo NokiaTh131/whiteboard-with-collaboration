@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { Point } from "./type";
 import { MousePointer2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { connectionIdToColor } from "@/app/lib/utils";
 
 interface CursorPresenceProps {
@@ -9,7 +10,6 @@ interface CursorPresenceProps {
   username: string;
 }
 
-// Generate a consistent color based on the username
 export const stringToColor = (str: string) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -24,13 +24,18 @@ export const CursorPresence = memo(
     const userColor = stringToColor(userId);
 
     return (
-      <div
+      <motion.div
         className="absolute pointer-events-none"
-        style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          zIndex: 9999,
+        animate={{
+          left: position.x,
+          top: position.y,
         }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 50,
+        }}
+        style={{ zIndex: 9999 }}
       >
         <MousePointer2
           size={20}
@@ -49,7 +54,7 @@ export const CursorPresence = memo(
         >
           {username}
         </div>
-      </div>
+      </motion.div>
     );
   }
 );

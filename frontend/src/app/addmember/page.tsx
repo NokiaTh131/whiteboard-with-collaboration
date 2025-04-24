@@ -6,7 +6,7 @@ import { UserPlus, Users, Mail, X, Loader2, CheckCircle } from "lucide-react";
 import { ResUser } from "../board/[id]/page";
 import axios from "axios";
 
-const AddMemberPage = () => {
+const Page = () => {
   const router = useRouter();
   const params = useSearchParams();
   const boardId = params.get("boardId");
@@ -254,4 +254,4 @@ const AddMemberPage = () => {
   );
 };
 
-export default AddMemberPage;
+export default Page;
