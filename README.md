@@ -1,4 +1,4 @@
-# Collaborative Writeboard App Backend
+# Collaborative Writeboard App
 
 all free framework & library real-time collaborative drawing application built with NestJS and NextJS. 
 
@@ -25,3 +25,5 @@ all free framework & library real-time collaborative drawing application built w
 ### WhiteBoard
 ![image](https://github.com/user-attachments/assets/62eeb6a5-a33d-43a7-aab8-5cdcd87a7371)
 
+### Collaboration!
+![image](https://github.com/user-attachments/assets/daf37c5f-956b-4728-9995-73f796225524)
