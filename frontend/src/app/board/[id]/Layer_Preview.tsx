@@ -6,6 +6,8 @@ import { Rectangle } from "./components/rectangle";
 import { Ellipse } from "./components/ellipse";
 import { Text } from "./components/text";
 import { Note } from "./components/note";
+import { Path } from "./components/path";
+import { colorToCSS } from "@/app/lib/utils";
 interface LayerPreviewProps {
   layer: BoardObject;
   onLayerPointDown: (e: React.PointerEvent, layerId: string) => void;
@@ -62,6 +64,18 @@ export const LayerPreview = memo(
             onPointerDown={onLayerPointDown}
             selectionColor={selectionColor}
             updateValue={updateValue}
+          />
+        );
+      case LayerType.Path:
+        return (
+          <Path
+            key={layer._id}
+            points={layer.points ?? []}
+            onPointerDown={(e) => onLayerPointDown(e, layer._id)}
+            x={layer.x}
+            y={layer.y}
+            fill={layer.fill ? colorToCSS(layer.fill) : "#000"}
+            stroke={selectionColor}
           />
         );
       default:

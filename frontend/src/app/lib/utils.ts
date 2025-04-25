@@ -1,4 +1,11 @@
-import { Camera, Color, Point, Side, XYWH } from "../board/[id]/type";
+import {
+  Camera,
+  Color,
+  LayerType,
+  Point,
+  Side,
+  XYWH,
+} from "../board/[id]/type";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -62,4 +69,71 @@ export function rersizeBounds(bounds: XYWH, corner: Side, point: Point): XYWH {
 export function getContrastingTextColor(color: Color) {
   const luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
   return luminance > 182 ? "black" : "white";
+}
+
+export function penPointsToPathLayer(points: number[][], color: Color) {
+  if (points.length < 2) {
+    throw new Error("point is less than 2, cannot transform.");
+  }
+
+  let left = Number.POSITIVE_INFINITY;
+  let top = Number.POSITIVE_INFINITY;
+  let right = Number.NEGATIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+
+  for (const point of points) {
+    const [x, y] = point;
+    if (left > x) {
+      left = x;
+    }
+    if (top > y) {
+      top = y;
+    }
+    if (right < x) {
+      right = x;
+    }
+    if (bottom < y) {
+      bottom = y;
+    }
+  }
+
+  return {
+    type: LayerType.Path,
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+    fill: color,
+    points: (points as Array<[number, number, number]>).map(
+      ([x, y, pressure]) => [x - left, y - top, pressure]
+    ),
+  };
+}
+
+export function getSvgPathFromStroke(stroke: number[][]) {
+  if (!stroke.length) return "";
+
+  // Start with the first point
+  let d = `M${stroke[0][0]},${stroke[0][1]}`;
+
+  // For each subsequent point, create a quadratic bezier curve
+  // Each point needs a control point and an end point
+  for (let i = 1; i < stroke.length; i++) {
+    const [x0, y0] = stroke[i - 1];
+    const [x1, y1] = stroke[i];
+
+    // Use midpoint as control point for simplicity
+    const cpx = (x0 + x1) / 2;
+    const cpy = (y0 + y1) / 2;
+
+    d += ` Q${x0},${y0} ${cpx},${cpy}`;
+  }
+
+  // Add the last segment if needed
+  if (stroke.length > 1) {
+    const [x, y] = stroke[stroke.length - 1];
+    d += ` L${x},${y}`;
+  }
+
+  return d;
 }

@@ -18,12 +18,18 @@ import {
   XYWH,
   ActionHistory,
 } from "./type";
-import { pointerEventToCanvasPoint, rersizeBounds } from "@/app/lib/utils";
+import {
+  pointerEventToCanvasPoint,
+  rersizeBounds,
+  penPointsToPathLayer,
+  colorToCSS,
+} from "@/app/lib/utils";
 import { LayerPreview } from "./Layer_Preview";
 import { CursorPresence, stringToColor } from "./CursorPresence";
 import { SelectionBox } from "./SelectionBox";
 import { SelectionTools } from "./SelectionTools";
 import { Stack } from "@/app/hooks/stack";
+import { Path } from "./components/path";
 interface CanvasProps {
   boardId: string;
 }
@@ -37,6 +43,11 @@ interface Board {
 
 interface SelectionMap {
   [userId: string]: string[];
+}
+
+interface PencilDraft {
+  points: Array<[number, number, number]> | null;
+  penColor: Color;
 }
 
 export const Canvas = ({ boardId }: CanvasProps) => {
@@ -63,13 +74,13 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
   const [otherSelections, setOtherSelections] = useState<SelectionMap>({});
   const [lastCursorUpdate, setLastCursorUpdate] = useState(0);
-  const CURSOR_UPDATE_THROTTLE = 50; // ms
+  const CURSOR_UPDATE_THROTTLE = 100; // ms
   const [resize, setResize] = useState<XYWH | null>(null);
   const [reposition, setRePosition] =
     useState<Record<string, { x: number; y: number }>>();
+  const [pencilDraft, setPencilDraft] = useState<PencilDraft | null>(null);
   const [isMoved, setIsMoved] = useState<boolean>(false);
   const isUndoRef = useRef(false);
-  // const history = useRef(new Stack<ActionHistory>(10));
   const userStacksRef = useRef(new Map<string, Stack<ActionHistory>>());
   const MAX_OBJECTS = 50;
 
@@ -337,7 +348,71 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     },
     [canvasState, selectedObjects, boardObjects]
   );
+  const insertPath = useCallback(() => {
+    if (
+      pencilDraft?.points == null ||
+      pencilDraft.points.length < 2 ||
+      boardObjects.length >= MAX_OBJECTS
+    ) {
+      setPencilDraft({
+        ...pencilDraft,
+        points: null,
+        penColor: pencilDraft?.penColor || { r: 0, g: 0, b: 0 },
+      });
+      return;
+    }
+    const object = penPointsToPathLayer(pencilDraft.points, lastUsedColor);
+    socket?.emit("object:create", { object, boardId });
+    setCanvasState({ mode: CanvasMode.Pencil });
+    setPencilDraft(null);
+  }, [
+    boardId,
+    boardObjects.length,
+    lastUsedColor,
+    pencilDraft,
+    socket,
+    setCanvasState,
+  ]);
 
+  const startDrawing = useCallback(
+    (point: Point, pressure: number) => {
+      setPencilDraft({
+        points: [[point.x, point.y, pressure]],
+        penColor: lastUsedColor,
+      });
+    },
+    [lastUsedColor]
+  );
+
+  const continueDrawing = useCallback(
+    (point: Point, e: React.PointerEvent) => {
+      if (
+        canvasState.mode !== CanvasMode.Pencil ||
+        e.pressure == 0 ||
+        pencilDraft?.points == null
+      ) {
+        return;
+      }
+
+      if (
+        pencilDraft.points.length === 1 &&
+        pencilDraft.points[0][0] === point.x &&
+        pencilDraft.points[0][1] === point.y
+      ) {
+        console.log("Duplicate point detected, no change:", point);
+        setPencilDraft(pencilDraft);
+      } else {
+        setPencilDraft({
+          ...pencilDraft,
+          points: pencilDraft?.points
+            ? [...pencilDraft.points, [point.x, point.y, e.pressure]]
+            : [[point.x, point.y, e.pressure]],
+          penColor: pencilDraft?.penColor || { r: 0, g: 0, b: 0 },
+        });
+      }
+    },
+    [canvasState.mode, pencilDraft]
+  );
   const resizeSelectedLayer = useCallback(
     (point: Point) => {
       if (canvasState.mode !== CanvasMode.Resizing) {
@@ -392,24 +467,36 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         setIsMoved(true);
       } else if (canvasState.mode === CanvasMode.Resizing) {
         resizeSelectedLayer(point);
+      } else if (canvasState.mode === CanvasMode.Pencil) {
+        continueDrawing(point, e);
       }
 
       // Use point for other canvas actions if needed
     },
     [
       camera,
-      translateSelectedLayers,
       emitCursorPosition,
+      canvasState.mode,
+      translateSelectedLayers,
       resizeSelectedLayer,
-      canvasState,
+      continueDrawing,
     ]
   );
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
+      if (
+        canvasState.mode === CanvasMode.None ||
+        canvasState.mode === CanvasMode.Pressing
+      ) {
+        setSelectedObjects([]);
+        setCanvasState({ mode: CanvasMode.None });
+      }
       if (canvasState.mode === CanvasMode.Inserting) {
         insertLayer(canvasState.layerType, point);
+      } else if (canvasState.mode === CanvasMode.Pencil) {
+        insertPath();
       } else if (canvasState.mode === CanvasMode.Translating && isMoved) {
         if (reposition && Object.keys(reposition).length > 0) {
           Object.entries(reposition).forEach(([objectId, position]) => {
@@ -437,6 +524,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       }
     },
     [
+      setCanvasState,
       boardId,
       camera,
       canvasState,
@@ -446,6 +534,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       socket,
       reposition,
       isMoved,
+      insertPath,
     ]
   );
 
@@ -459,7 +548,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     }
   }, [error]);
 
-  const onPointDown = useCallback(
+  const onLayerPointDown = useCallback(
     (e: React.PointerEvent, objectId: string) => {
       if (
         canvasState.mode === CanvasMode.Pencil ||
@@ -499,7 +588,23 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     }
   }, [socket, boardId, user.id]);
 
-  // Replace your current getObjectSelectionColor useCallback with this useMemo approach
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      const point = pointerEventToCanvasPoint(e, camera);
+      if (canvasState.mode === CanvasMode.Inserting) {
+        return;
+      }
+
+      if (canvasState.mode === CanvasMode.Pencil) {
+        startDrawing(point, e.pressure);
+        return;
+      }
+
+      setCanvasState({ origin: point, mode: CanvasMode.Pressing });
+    },
+    [camera, canvasState.mode, setCanvasState, startDrawing]
+  );
+
   const objectSelectionColors = useMemo(() => {
     const colorMap = new Map();
 
@@ -587,6 +692,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         onWheel={onWheel}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerDown={onPointerDown}
         className={`h-[100vh] w-[100vw]`}
         style={{
           backgroundColor: board?.backgroundColor,
@@ -597,7 +703,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
             <LayerPreview
               key={layer._id}
               layer={layer}
-              onLayerPointDown={onPointDown}
+              onLayerPointDown={onLayerPointDown}
               selectionColor={objectSelectionColors(layer._id)}
               updateValue={updateValue}
             />
@@ -607,6 +713,14 @@ export const Canvas = ({ boardId }: CanvasProps) => {
             selectedObjects={selectedObjects}
             boardObjects={boardObjects}
           />
+          {pencilDraft?.points && pencilDraft.points.length > 0 && (
+            <Path
+              points={pencilDraft.points}
+              fill={colorToCSS(lastUsedColor)}
+              x={0}
+              y={0}
+            />
+          )}
         </g>
       </svg>
     </main>
