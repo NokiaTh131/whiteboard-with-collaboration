@@ -17,9 +17,16 @@ import { BoardService } from 'src/board/board.service';
 import { ParticipantsService } from 'src/participants/participants.service';
 import { PermissionService } from 'src/permission/permission.service';
 import { UserService } from 'src/user/user.service';
+import { ConfigService } from '@nestjs/config';
+
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3000',
+    origin: (origin, callback) => {
+      const configService = new ConfigService();
+      const clientUrl =
+        configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
+      callback(null, clientUrl);
+    },
     credentials: true,
   },
 })

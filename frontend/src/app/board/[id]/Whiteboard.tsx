@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { io, Socket } from "socket.io-client";
 import InformationBar from "./InformationBar";
 import Toolbar from "./ToolBar";
@@ -110,6 +117,9 @@ export const Canvas = ({ boardId }: CanvasProps) => {
 
     socket.on("object:created", (newObject: BoardObject) => {
       setBoardObjects((prev) => [...prev, newObject]);
+      if (newObject.type === LayerType.Path) {
+        setPencilDraft(null);
+      }
       if (!isUndoRef.current) {
         if (newObject.createdBy === user.id) {
           getUserStack(user.id).push({
@@ -225,6 +235,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     }
     return userStacksRef.current.get(userId)!;
   };
+  const deferredBoardObjects = useDeferredValue(boardObjects);
 
   const undo = useCallback(() => {
     if (getUserStack(user.id).size() > 0) {
@@ -364,7 +375,6 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     const object = penPointsToPathLayer(pencilDraft.points, lastUsedColor);
     socket?.emit("object:create", { object, boardId });
     setCanvasState({ mode: CanvasMode.Pencil });
-    setPencilDraft(null);
   }, [
     boardId,
     boardObjects.length,
@@ -388,7 +398,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     (point: Point, e: React.PointerEvent) => {
       if (
         canvasState.mode !== CanvasMode.Pencil ||
-        e.pressure == 0 ||
+        e.buttons !== 1 ||
         pencilDraft?.points == null
       ) {
         return;
@@ -590,6 +600,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
+      console.log(canvasState.mode);
       const point = pointerEventToCanvasPoint(e, camera);
       if (canvasState.mode === CanvasMode.Inserting) {
         return;
@@ -699,7 +710,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         }}
       >
         <g style={{ transform: `translate(${camera.x}px, ${camera.y}px)` }}>
-          {boardObjects.map((layer) => (
+          {deferredBoardObjects.map((layer) => (
             <LayerPreview
               key={layer._id}
               layer={layer}

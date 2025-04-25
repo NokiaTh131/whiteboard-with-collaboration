@@ -31,7 +31,7 @@ export class AuthenticatedSocketIoAdapter extends IoAdapter {
         if (!process.env.JWT_SECRET) {
           return next(new Error('JWT secret is not defined'));
         }
-        const decoded = jwt.verify(token as string, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         (socket as any).data.user = decoded; // attach user info to socket
         next();
       } catch (err) {

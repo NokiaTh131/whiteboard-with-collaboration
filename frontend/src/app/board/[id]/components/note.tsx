@@ -1,13 +1,10 @@
 import ContentEditable, { ContentEditableEvent } from "react-contenteditable";
-import { Ubuntu_Sans } from "next/font/google";
+import { Sriracha } from "next/font/google";
 import { cn, colorToCSS, getContrastingTextColor } from "@/app/lib/utils";
 import { BoardObject } from "../type";
 import { debounce } from "lodash";
 
-const font = Ubuntu_Sans({
-  subsets: ["latin"],
-  weight: ["500"],
-});
+const font = Sriracha({ weight: "400", subsets: ["latin"] });
 
 interface NoteProps {
   id: string;
