@@ -26,8 +26,8 @@ export class AuthController {
     const user = await this.authService.register(registerDTO);
     res.cookie('token', user.token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'None',
     });
     return user.user;
   }
@@ -38,8 +38,8 @@ export class AuthController {
     const user = await this.authService.login(req.user);
     res.cookie('token', user.token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'None',
     });
     return user.user;
   }
@@ -49,8 +49,8 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res) {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'None',
     });
     return { message: 'Logged out' };
   }
