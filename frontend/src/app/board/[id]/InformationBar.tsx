@@ -52,7 +52,7 @@ export default function InformationBar({
                 alt={participant.userName}
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="rounded-full select-none"
               />
             </div>
           </div>

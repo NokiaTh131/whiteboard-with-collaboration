@@ -15,10 +15,10 @@ interface NoteProps {
 }
 
 const calculateFontSize = (width: number, height: number) => {
-  const scaleFactor = 0.1;
+  const scaleFactor = 0.15;
   const fontSizeBaseHeight = height * scaleFactor;
   const fontSizeBaseWidth = width * scaleFactor;
-  const maxFontSize = 48;
+  const maxFontSize = 96;
   return Math.min(maxFontSize, fontSizeBaseHeight, fontSizeBaseWidth);
 };
 

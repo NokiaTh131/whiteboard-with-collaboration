@@ -1,12 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import InformationBar from "./InformationBar";
 import Toolbar from "./ToolBar";
@@ -231,11 +224,10 @@ export const Canvas = ({ boardId }: CanvasProps) => {
 
   const getUserStack = (userId: string) => {
     if (!userStacksRef.current.has(userId)) {
-      userStacksRef.current.set(userId, new Stack<ActionHistory>(10));
+      userStacksRef.current.set(userId, new Stack<ActionHistory>(20));
     }
     return userStacksRef.current.get(userId)!;
   };
-  const deferredBoardObjects = useDeferredValue(boardObjects);
 
   const undo = useCallback(() => {
     if (getUserStack(user.id).size() > 0) {
@@ -600,8 +592,9 @@ export const Canvas = ({ boardId }: CanvasProps) => {
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      console.log(canvasState.mode);
       const point = pointerEventToCanvasPoint(e, camera);
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
       if (canvasState.mode === CanvasMode.Inserting) {
         return;
       }
@@ -634,13 +627,16 @@ export const Canvas = ({ boardId }: CanvasProps) => {
 
   const updateValue = useCallback(
     (newValue: string) => {
-      socket?.emit("object:update", {
-        boardId: boardId,
-        objectId: selectedObjects[0],
-        updates: {
-          value: newValue,
-        },
-      });
+      if (selectedObjects.length > 0) {
+        console.log("do update");
+        socket?.emit("object:update", {
+          boardId: boardId,
+          objectId: selectedObjects[0],
+          updates: {
+            value: newValue,
+          },
+        });
+      }
     },
     [boardId, selectedObjects, socket]
   );
@@ -650,12 +646,6 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       className="h-full w-full relative bg-neutral-100 touch-none"
       onPointerLeave={onPointerLeave}
     >
-      <div className="fixed left-1/2 top-1/2">
-        {/* {JSON.stringify(otherSelections)} */}
-      </div>
-      <div className="fixed left-1/2 top-1/4">
-        {/* {JSON.stringify(selectedObjects)} */}
-      </div>
       {error && (
         <div className="fixed left-1/2 top-5 bg-red-500 text-white p-2 rounded">
           {error}
@@ -710,7 +700,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         }}
       >
         <g style={{ transform: `translate(${camera.x}px, ${camera.y}px)` }}>
-          {deferredBoardObjects.map((layer) => (
+          {boardObjects.map((layer) => (
             <LayerPreview
               key={layer._id}
               layer={layer}
