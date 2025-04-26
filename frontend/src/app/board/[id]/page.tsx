@@ -1,6 +1,6 @@
 "use client";
 import { Canvas } from "./Whiteboard";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 // import { Canvas } from "./Whiteboard";
 import { useParams } from "next/navigation";
 import axios from "axios";
@@ -18,7 +18,7 @@ interface Member {
   userId: ResUser;
 }
 
-export default function Board() {
+function Board() {
   const params = useParams();
   const boardId = params.id as string;
   const [loading, setLoading] = useState(false);
@@ -57,4 +57,14 @@ export default function Board() {
   }, [boardId, router]);
 
   return !loading ? <div>{<Canvas boardId={boardId} />}</div> : <Loading />;
+}
+
+export default function BoardPage() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Board />
+      </Suspense>
+    </div>
+  );
 }

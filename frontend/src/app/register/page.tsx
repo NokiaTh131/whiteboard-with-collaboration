@@ -2,7 +2,7 @@
 
 "use client";
 // pages/register.tsx
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ interface RegisterResponse {
   token: string;
 }
 
-export default function Register() {
+function Register() {
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -216,5 +216,15 @@ export default function Register() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Register />
+      </Suspense>
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 "use client";
 // pages/login.tsx
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ interface LoginResponse {
   token: string;
 }
 
-export default function Login() {
+function Login() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -136,5 +136,15 @@ export default function Login() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Login />
+      </Suspense>
+    </div>
   );
 }
