@@ -42,6 +42,9 @@ export class BoardObject extends Document {
   @Prop({ type: [[Number]], required: false }) // Array of coordinate pairs
   points?: number[][];
 
+  @Prop({ type: Number, required: false, default: 3 })
+  strokeWidth?: number;
+
   @Prop({ required: false })
   value?: string;
 

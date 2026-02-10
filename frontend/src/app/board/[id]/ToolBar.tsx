@@ -16,9 +16,17 @@ interface ToolbarProbs {
   canvasState: CanvasState;
   setCanvasState: (newState: CanvasState) => void;
   undo: () => void;
+  strokeWidth: number;
+  setStrokeWidth: (width: number) => void;
 }
 
-const Toolbar = ({ canvasState, setCanvasState, undo }: ToolbarProbs) => {
+const Toolbar = ({
+  canvasState,
+  setCanvasState,
+  undo,
+  strokeWidth,
+  setStrokeWidth,
+}: ToolbarProbs) => {
   return (
     <div className="fixed top-1/2 left-2 transform -translate-y-1/2">
       <div className="flex flex-col space-y-4 rounded-md bg-white p-1 shadow-md">
@@ -127,6 +135,21 @@ const Toolbar = ({ canvasState, setCanvasState, undo }: ToolbarProbs) => {
           <Undo size={26} />
         </button>
       </div>
+      {canvasState.mode === CanvasMode.Pencil && (
+        <div className="flex flex-col space-y-4 rounded-md bg-white p-4 my-2 shadow-md">
+          <label className="text-xs font-semibold text-gray-500">
+            Thickness
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="50"
+            value={strokeWidth}
+            onChange={(e) => setStrokeWidth(Number(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+      )}
     </div>
   );
 };

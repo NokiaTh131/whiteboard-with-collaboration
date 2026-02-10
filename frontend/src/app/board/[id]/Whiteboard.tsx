@@ -80,6 +80,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     useState<Record<string, { x: number; y: number }>>();
   const [pencilDraft, setPencilDraft] = useState<PencilDraft | null>(null);
   const [isMoved, setIsMoved] = useState<boolean>(false);
+  const [strokeWidth, setStrokeWidth] = useState<number>(16);
   const isUndoRef = useRef(false);
   const userStacksRef = useRef(new Map<string, Stack<ActionHistory>>());
   const MAX_OBJECTS = 50;
@@ -364,7 +365,11 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       });
       return;
     }
-    const object = penPointsToPathLayer(pencilDraft.points, lastUsedColor);
+    const object = penPointsToPathLayer(
+      pencilDraft.points,
+      lastUsedColor,
+      strokeWidth
+    );
     socket?.emit("object:create", { object, boardId });
     setCanvasState({ mode: CanvasMode.Pencil });
   }, [
@@ -374,6 +379,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     pencilDraft,
     socket,
     setCanvasState,
+    strokeWidth,
   ]);
 
   const startDrawing = useCallback(
@@ -655,6 +661,8 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         canvasState={canvasState}
         setCanvasState={setCanvasState}
         undo={undo}
+        strokeWidth={strokeWidth}
+        setStrokeWidth={setStrokeWidth}
       />
       <SelectionTools
         camera={camera}
@@ -720,6 +728,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
               fill={colorToCSS(lastUsedColor)}
               x={0}
               y={0}
+              strokeWidth={strokeWidth}
             />
           )}
         </g>

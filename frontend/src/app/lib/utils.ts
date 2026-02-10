@@ -71,7 +71,11 @@ export function getContrastingTextColor(color: Color) {
   return luminance > 182 ? "black" : "white";
 }
 
-export function penPointsToPathLayer(points: number[][], color: Color) {
+export function penPointsToPathLayer(
+  points: number[][],
+  color: Color,
+  strokeWidth?: number
+) {
   if (points.length < 2) {
     throw new Error("point is less than 2, cannot transform.");
   }
@@ -107,6 +111,7 @@ export function penPointsToPathLayer(points: number[][], color: Color) {
     points: (points as Array<[number, number, number]>).map(
       ([x, y, pressure]) => [x - left, y - top, pressure]
     ),
+    strokeWidth: strokeWidth || 16,
   };
 }
 

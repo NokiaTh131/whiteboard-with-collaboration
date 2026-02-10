@@ -47,6 +47,7 @@ export type PathLayer = {
   fill: Color;
   points: number[][];
   value?: string;
+  strokeWidth?: number;
 };
 
 export type TextLayer = {
@@ -150,6 +151,7 @@ export interface BoardObject {
   points?: number[][];
   value?: string;
   createdBy: string;
+  strokeWidth?: number;
 }
 
 export interface Participants {
