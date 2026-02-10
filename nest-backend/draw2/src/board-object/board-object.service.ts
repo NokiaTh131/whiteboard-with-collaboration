@@ -31,7 +31,7 @@ export class BoardObjectService {
   }
 
   async deleteMany(boardId: string) {
-    return this.boardObjectModel.deleteMany({
+    this.boardObjectModel.deleteMany({
       boardId: new Types.ObjectId(boardId),
     });
   }
